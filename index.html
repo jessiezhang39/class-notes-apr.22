@@ -1,0 +1,118 @@
+<script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
+<script>
+/* global nn */ 
+  
+const GIF = "bird_2.gif"
+const COLOR = "cornsilk"
+
+let multiplier = 0
+let num_circles = 4
+let birds = 20
+let scale = 1
+
+const createGIF = function(x, y, angle){
+  let rotate = angle / (Math.PI*2) * multiplier
+  nn.create("img")
+    .set({src: GIF})
+    .css({
+      position: "absolute",
+      left: x,
+      top: y,
+      transform: `rotate(${rotate}deg)`,
+      angle: angle
+    })
+    .addTo("body")
+}
+
+const createSlider = function(min, max, start, step, num, func){
+  nn.create('input')
+    .set({
+      type: 'range',
+      min: min,
+      max: max,
+      value: start,
+      step: step
+    })
+    .addTo('body')
+    .on('input', (e) => {func(e)})
+    .css({
+      position: "absolute",
+      left: 10,
+      bottom: 10 + 20 * num,
+      width: nn.width - 20,
+      zIndex: 10
+    
+  })
+}
+
+async function setup(){
+  nn.get("body").css({backgroundColor: COLOR})
+  
+  //rotation slider
+  createSlider(0, 3600, multiplier, 360, 0, (e) => {
+    multiplier = Number(e.target.value)
+    nn.getAll("img").forEach((img) => {
+      let rotate = img.style.angle / (Math.PI*2) * multiplier
+      img.style.transform = `rotate(${rotate}deg)`
+    })
+  })
+  
+  //radius slider
+  createSlider(0, 4, 0, 0.1, 1, (e) => {
+    let i = 0
+    let j = 1
+    nn.getAll("img").forEach((img) => {
+      let x = (nn.width - img.width) / 2 
+      let y = (nn.height - img.height) / 2 
+      if (e !== 0){
+        let radius = Math.min(x, y) * j/(num_circles / Number(e.target.value))
+        x += Math.cos(img.style.angle) * radius
+        y += Math.sin(img.style.angle) * radius
+        i++
+        if (i % (j*birds) === 0){
+          j++
+          i = 0
+        }
+        
+      }
+      img.style.left = `${x}px`
+      img.style.top = `${y}px`
+    })
+  })
+  
+  const gif = await nn.loadImage(GIF)
+  
+  //scale slider
+  createSlider(0, 1, 1, 0.01, 2, (e) => {  
+    nn.getAll("img").forEach((img) => {
+      let curr_width = img.width
+      let curr_height = img.height
+      img.width = gif.width * Number(e.target.value)
+      let x = Number(img.style.left.slice(0, -2)) + (curr_width - img.width) / 2
+      let y = Number(img.style.top.slice(0, -2)) + (curr_height - img.height) / 2
+      img.style.left = `${x}px`
+      img.style.top = `${y}px`
+    })
+    scale = Number(e.target.value)
+    
+  })
+  
+  //number of circles
+  for (let j = 0; j < num_circles; j++){
+    //denisty of birds in each circle
+    let num_birds = birds * (j+1)
+    for (let i = 0; i < num_birds; i++){
+      let x = (nn.width - gif.width) / 2 
+      let y = (nn.height - gif.height) / 2 
+      let radius = Math.min(x, y) * ((j+1)/num_circles) * 0
+      let angle = (2*Math.PI)/num_birds*i
+      x += Math.cos(angle) * radius
+      y += Math.sin(angle) * radius
+      createGIF(x, y, angle)
+    }
+  }
+}
+  
+nn.on("load", setup)
+  
+</script>
